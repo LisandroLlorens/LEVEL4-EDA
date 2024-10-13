@@ -1,3 +1,4 @@
+#include <complex.h>
 #include <iostream>
 #include <string>
 
@@ -18,7 +19,6 @@ typedef struct cells{
     bool wallEast;
     bool wallWest;
     bool wallSouth;
-    bool mouseMark;
 }cells_t;
 
 typedef struct mouse{
@@ -42,6 +42,7 @@ board_t initBoard(void);
 void floodFill(board_t* board, char mode);
 void travesti(board_t* board);
 char bestMove(board_t* board);
+void setWallDir(char dir, board_t* board);
 
 void log(const std::string& text) {
     std::cerr << text << std::endl;
@@ -51,15 +52,20 @@ int main(int argc, char* argv[]) {
     log("Running...");
     API::setColor(0, 0, 'G');
     API::setText(0, 0, "abc");
-
     board_t board = initBoard();
-    floodFill(&board, GO);
-    travesti(&board);
+    int tripsLeft = 5;
+    char mode = GO;
 
-
-
-
+    while (tripsLeft) {
+        while(board.cells[board.mouse.x][board.mouse.y].distance) {
+            floodFill(&board, mode);
+            travesti(&board);
+        }
+        mode = (mode == GO)? RETURN : GO;
+        tripsLeft--;
+    }
 }
+
 
 
 
@@ -132,7 +138,7 @@ board_t initBoard(void) {
             board.cells[i][j].wallEast = 0;
             board.cells[i][j].wallSouth = 0;
             board.cells[i][j].wallWest = 0;
-            board.cells[i][j].mouseMark = 0;
+
 
             if(i == 0) {
                 board.cells[i][j].wallWest = 1;
@@ -162,13 +168,12 @@ board_t initBoard(void) {
 }
 
 
-void floodFill(board_t* board, char mode){
+void floodFill(board_t* board, char mode) {
     for(int i = 0; i < MAX_SIZE ; i++) {
         for(int j = 0; j < MAX_SIZE; j++) {
             board->cells[i][j].mark = false;// resets path marks
         }
     }
-
     std::queue<cells_t*> pathQ;
     switch (mode) {
         case GO:
@@ -192,36 +197,38 @@ void floodFill(board_t* board, char mode){
 
     while(!pathQ.empty()) {
 
-        thisCell = pathQ.front();
-        pathQ.pop();
 
-        if(!thisCell->wallNorth && !board->cells[thisCell->x][thisCell->y + 1].mark && thisCell->y + 1 < MAX_SIZE) {//north neighbour
+        thisCell = pathQ.front();
+
+
+        if(!(thisCell->wallNorth) && !board->cells[thisCell->x][thisCell->y + 1].mark && thisCell->y + 1 < MAX_SIZE) {//north neighbour
             pathQ.push(&(board->cells[thisCell->x][thisCell->y + 1]));
             board->cells[thisCell->x][thisCell->y + 1].mark = 1;
             board->cells[thisCell->x][thisCell->y + 1].distance = thisCell->distance + 1;
 
             API::setText(thisCell->x, thisCell->y + 1, std::to_string(thisCell->distance + 1));
         }
-        if(!thisCell->wallSouth && !board->cells[thisCell->x][thisCell->y - 1].mark && thisCell->y - 1 >= 0) {//south neighbour
+        if(!(thisCell->wallSouth) && !board->cells[thisCell->x][thisCell->y - 1].mark && thisCell->y - 1 >= 0) {//south neighbour
             pathQ.push(&(board->cells[thisCell->x][thisCell->y - 1]));
             board->cells[thisCell->x][thisCell->y - 1].mark = 1;
             board->cells[thisCell->x][thisCell->y - 1].distance = thisCell->distance + 1;
 
             API::setText(thisCell->x, thisCell->y - 1, std::to_string(thisCell->distance + 1));
         }
-        if(!thisCell->wallWest && !board->cells[thisCell->x - 1][thisCell->y].mark && thisCell->x - 1 >= 0) {//west neighbour
+        if(!(thisCell->wallWest) && !board->cells[thisCell->x - 1][thisCell->y].mark && thisCell->x - 1 >= 0) {//west neighbour
             pathQ.push(&(board->cells[thisCell->x - 1][thisCell->y]));
             board->cells[thisCell->x - 1][thisCell->y].mark = 1;
             board->cells[thisCell->x - 1][thisCell->y].distance = thisCell->distance + 1;
 
             API::setText(thisCell->x - 1, thisCell->y, std::to_string(thisCell->distance + 1));
         }
-        if(!thisCell->wallEast && !board->cells[thisCell->x + 1][thisCell->y].mark && thisCell->x + 1 < MAX_SIZE) {//east neighbour
+        if(!(thisCell->wallEast) && !board->cells[thisCell->x + 1][thisCell->y].mark && thisCell->x + 1 < MAX_SIZE) {//east neighbour
             pathQ.push(&(board->cells[thisCell->x+ 1][thisCell->y]));
             board->cells[thisCell->x + 1][thisCell->y].mark = 1;
             board->cells[thisCell->x + 1][thisCell->y].distance = thisCell->distance + 1;
             API::setText(thisCell->x + 1, thisCell->y, std::to_string(thisCell->distance +1));
         }
+        pathQ.pop();
 
     }
 
@@ -229,7 +236,22 @@ void floodFill(board_t* board, char mode){
 void travesti(board_t* board) {
     char auxFace;
     bool stuck = false;
+
     while(!stuck) {
+
+        if(API::wallRight()) {
+            auxFace = whichDir('r', board->mouse.direction);
+            setWallDir(auxFace, board);
+        }
+        if (API::wallLeft()){
+            auxFace = whichDir('l', board->mouse.direction);
+            setWallDir(auxFace, board);
+        }
+
+        if (API::wallFront()){
+            setWallDir(board->mouse.direction, board);
+
+        }
         switch (bestMove(board)) {
             case 'f':
                 API::moveForward();
@@ -248,27 +270,11 @@ void travesti(board_t* board) {
                 stuck = true;
                 break;
         }
-        if(API::wallRight()) {
-            auxFace = whichDir('r', board->mouse.direction);
-            API::setWall(board->mouse.x, board->mouse.y, auxFace);
-        }
-        if (API::wallLeft()){
-            auxFace = whichDir('l', board->mouse.direction);
-            API::setWall(board->mouse.x, board->mouse.y, auxFace);
-        }
-
-        if (API::wallFront()){
-            API::setWall(board->mouse.x, board->mouse.y, board->mouse.direction);
-        }
         if(!stuck) {
             updateCoords(&board->mouse.x, &board->mouse.y, board->mouse.direction);
             API::setColor(board->mouse.x, board->mouse.y, 'G');
         }
-
     }
-
-
-
 }
 
 
@@ -312,4 +318,23 @@ char bestMove(board_t* board) {
     return chosenMove;
 }
 
+
+void setWallDir(char dir, board_t* board) {
+
+    switch (dir) {
+        case 'n':
+            board->cells[board->mouse.x][board->mouse.y].wallNorth = true;
+            break;
+        case 's':
+            board->cells[board->mouse.x][board->mouse.y].wallSouth = true;
+            break;
+        case 'e':
+            board->cells[board->mouse.x][board->mouse.y].wallEast = true;
+            break;
+        case 'w':
+            board->cells[board->mouse.x][board->mouse.y].wallWest = true;
+            break;
+    }
+    API::setWall(board->mouse.x, board->mouse.y, dir);
+}
 
