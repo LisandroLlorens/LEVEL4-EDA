@@ -41,6 +41,7 @@ void updateCoords(int* x, int* y, char direction);
 board_t initBoard(void);
 void floodFill(board_t* board, char mode);
 void travesti(board_t* board);
+char bestMove(board_t* board);
 
 void log(const std::string& text) {
     std::cerr << text << std::endl;
@@ -52,45 +53,14 @@ int main(int argc, char* argv[]) {
     API::setText(0, 0, "abc");
 
     board_t board = initBoard();
-
-
     floodFill(&board, GO);
+    travesti(&board);
 
-    char auxFace;
-    while (true) {
 
-        if(API::wallRight()) {
-            auxFace = whichDir('r', board.mouse.direction);
-            API::setWall(board.mouse.x, board.mouse.y, auxFace);
-        }
-        if (API::wallLeft()){
-            auxFace = whichDir('l', board.mouse.direction);
-            API::setWall(board.mouse.x, board.mouse.y, auxFace);
-        }
 
-        if (API::wallFront()){
-            API::setWall(board.mouse.x, board.mouse.y, board.mouse.direction);
-        }
 
-/*
-        if (!API::wallLeft()) {
-            API::turnLeft();
-            board.mouse.direction = whichDir('l', board.mouse.direction);
-        }
-
-        while (API::wallFront()) {
-            API::setWall(board.mouse.x, board.mouse.y, board.mouse.direction);
-            API::turnRight();
-            board.mouse.direction = whichDir('r', board.mouse.direction);
-        }
-*/
-        travesti(&board);
-        updateCoords(&board.mouse.x, &board.mouse.y, board.mouse.direction);
-        API::setColor(board.mouse.x, board.mouse.y, 'G');
-
-        API::moveForward();
-    }
 }
+
 
 
 char whichDir(char lastTurn, char direction) {
@@ -213,7 +183,8 @@ void floodFill(board_t* board, char mode){
             break;
 
         case RETURN:
-            board->cells[0][0] = {.mark = 1, .distance = 0, .x = 0, .y = 0};
+            board->cells[0][0] = {1, 0, 0, 0};
+            pathQ.push(&(board->cells[0][0]));
             break;
     }
 
@@ -255,51 +226,90 @@ void floodFill(board_t* board, char mode){
     }
 
 }
-
 void travesti(board_t* board) {
-    int tempX = board->mouse.x;
-    int tempY = board->mouse.y;
-    int i, counter;
-    floodFill(board);
-    std::array<move_t, 4> moves;
-    move_t thisMove;
-    for( i = 0; i < 4; i++){
-        tempX = board->mouse.x;
-        tempY = board->mouse.y;
-        if(!API::wallFront()) {
-            API::turnLeft();
+    char auxFace;
+    bool stuck = false;
+    while(!stuck) {
+        switch (bestMove(board)) {
+            case 'f':
+                API::moveForward();
+                break;
+            case 'r':
+                API::turnRight();
+                API::moveForward();
+                board->mouse.direction = whichDir('r', board->mouse.direction);
+                break;
+            case 'l':
+                API::turnLeft();
+                API::moveForward();
             board->mouse.direction = whichDir('l', board->mouse.direction);
-            updateCoords(&tempX, &tempY, board->mouse.direction);
-            thisMove.cell = board->cells[tempX][tempY];
-            thisMove.direction =board->mouse.direction;
-            moves[counter] = thisMove;
-            counter++;
+                break;
+            case 'x':
+                stuck = true;
+                break;
         }
-    }
-    for(i = 0; i < counter; i++) {
+        if(API::wallRight()) {
+            auxFace = whichDir('r', board->mouse.direction);
+            API::setWall(board->mouse.x, board->mouse.y, auxFace);
+        }
+        if (API::wallLeft()){
+            auxFace = whichDir('l', board->mouse.direction);
+            API::setWall(board->mouse.x, board->mouse.y, auxFace);
+        }
+
+        if (API::wallFront()){
+            API::setWall(board->mouse.x, board->mouse.y, board->mouse.direction);
+        }
+        if(!stuck) {
+            updateCoords(&board->mouse.x, &board->mouse.y, board->mouse.direction);
+            API::setColor(board->mouse.x, board->mouse.y, 'G');
+        }
 
     }
+
+
+
 }
+
 
 
 char bestMove(board_t* board) {
     int minDist = board->cells[board->mouse.x][board->mouse.y].distance;
+    char chosenMove = 'x', tempDir;
     int tempDist;
-    int tempX, tempY;
-    for( i = 0; i < 4; i++){
-        tempX = board->mouse.x;
-        tempY = board->mouse.y;
-        if(!API::wallFront()) {
-            API::turnLeft();
-            board->mouse.direction = whichDir('l', board->mouse.direction);
-            updateCoords(&tempX, &tempY, board->mouse.direction);
+    int tempX = board->mouse.x, tempY = board->mouse.y;
 
-            tempDist = board->cells[tempX][tempY].distance;
-            thisMove.direction =board->mouse.direction;
-            moves[counter] = thisMove;
-            counter++;
+    if(!API::wallFront()) {
+        updateCoords(&tempX, &tempY, board->mouse.direction);
+        if(minDist > board->cells[tempX][tempY].distance) {
+            minDist = board->cells[tempX][tempY].distance;
+            chosenMove = 'f';
         }
     }
+    if(!API::wallLeft()) {
+        tempX = board->mouse.x;
+        tempY = board->mouse.y;
+        tempDir = whichDir('l', board->mouse.direction);
 
+        updateCoords(&tempX, &tempY, tempDir);
+        if(minDist > board->cells[tempX][tempY].distance) {
+            minDist = board->cells[tempX][tempY].distance;
+            chosenMove = 'l';
+        }
 
+    }
+    if(!API::wallRight()) {
+        tempX = board->mouse.x;
+        tempY = board->mouse.y;
+        tempDir = whichDir('r', board->mouse.direction);
+
+        updateCoords(&tempX, &tempY, tempDir);
+        if(minDist > board->cells[tempX][tempY].distance) {
+            minDist = board->cells[tempX][tempY].distance;
+            chosenMove = 'r';
+        }
+    }
+    return chosenMove;
 }
+
+
