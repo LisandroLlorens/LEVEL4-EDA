@@ -1,13 +1,11 @@
-#include <complex.h>
+#include <complex>
 #include <iostream>
 #include <string>
+#include <queue>
 
 #include "API.h"
 
-#include <stack>
-#include <queue>
-
-#define MAX_SIZE 16
+#define MAX_SIZE 16 //Height, width of the maze
 #define GO 'g'
 #define RETURN 'r'
 
@@ -41,7 +39,7 @@ void updateCoords(int* x, int* y, char direction);
 board_t initBoard(void);
 void floodFill(board_t* board, char mode);
 void traverse(board_t* board);
-char bestMove(board_t* board, bool first);
+char bestMove(board_t* board);
 void setWallDir(char dir, board_t* board);
 
 void log(const std::string& text) {
@@ -52,16 +50,17 @@ int main(int argc, char* argv[]) {
     log("Running...");
     API::setColor(0, 0, 'G');
     API::setText(0, 0, "abc");
+
     board_t board = initBoard();
     int tripsLeft = 5;
     char mode = GO;
 
-    while (tripsLeft) {
-        while(board.cells[board.mouse.x][board.mouse.y].distance) {
+    while (tripsLeft) { //Go and return 5 times; halting after the 5th (3rd time going towards center)
+        while(board.cells[board.mouse.x][board.mouse.y].distance) { //While it has not arrived to its current destination
             floodFill(&board, mode);
             traverse(&board);
         }
-        mode = (mode == GO)? RETURN : GO;
+        mode = (mode == GO)? RETURN : GO; //Switches from trying to reach the center (GO), to trying to reach the start (RETURN)
         tripsLeft--;
     }
 }
@@ -123,23 +122,27 @@ void updateCoords(int* x, int* y, char direction) {
         case 's':
             (*y)--;
             break;
+        default:
+            break;
     }
 }
 
 board_t initBoard(void) {
     board_t board;
+
+    //initializes mouse
     board.mouse.direction = 'n';
     board.mouse.x = 0;
     board.mouse.y = 0;
 
     for(int i = 0; i < MAX_SIZE ; i++) {
-        for(int j = 0; j < MAX_SIZE ; j++) {//sets boundary walls
+        for(int j = 0; j < MAX_SIZE ; j++) {
             board.cells[i][j].wallNorth = 0;
             board.cells[i][j].wallEast = 0;
             board.cells[i][j].wallSouth = 0;
             board.cells[i][j].wallWest = 0;
 
-
+            //Setting boundary walls
             if(i == 0) {
                 board.cells[i][j].wallWest = 1;
                 API::setWall(i, j, 'w');
@@ -157,10 +160,9 @@ board_t initBoard(void) {
                 API::setWall(i, j, 'n');
             }
 
+            //Setting x,y coordinates
             board.cells[i][j].x = i;
             board.cells[i][j].y = j;
-
-
         }
 
     }
@@ -169,13 +171,16 @@ board_t initBoard(void) {
 
 
 void floodFill(board_t* board, char mode) {
-    log("j \n");
+    log("Starting floodFill...\n");
+
     for(int i = 0; i < MAX_SIZE ; i++) {
         for(int j = 0; j < MAX_SIZE; j++) {
             board->cells[i][j].mark = false;// resets path marks
         }
     }
     std::queue<cells_t*> pathQ;
+
+    //Switches between setting the center or the start as the objective
     switch (mode) {
         case GO:
             board->cells[7][7] = {1, 0, 7, 7};
@@ -192,15 +197,21 @@ void floodFill(board_t* board, char mode) {
             board->cells[0][0] = {1, 0, 0, 0};
             pathQ.push(&(board->cells[0][0]));
             break;
+
+        default:
+            break;
     }
 
     cells_t* thisCell;
 
     while(!pathQ.empty()) {
 
+        // Takes the first cell in the queue and enqueues all of its neighbours for future analysis of their neighbours;
+        // sets their marks to 1 to signify that they have been analyzed and sets their distance to be equal to the original cell plus one.
+
+        // Neighbours are considered valid if they are in the maze, are not marked and there is no wall separating them from the original cell.
 
         thisCell = pathQ.front();
-
 
         if(!(thisCell->wallNorth) && !board->cells[thisCell->x][thisCell->y + 1].mark && thisCell->y + 1 < MAX_SIZE) {//north neighbour
             pathQ.push(&(board->cells[thisCell->x][thisCell->y + 1]));
@@ -229,19 +240,24 @@ void floodFill(board_t* board, char mode) {
             board->cells[thisCell->x + 1][thisCell->y].distance = thisCell->distance + 1;
             API::setText(thisCell->x + 1, thisCell->y, std::to_string(thisCell->distance +1));
         }
+        // dequeues the cell
         pathQ.pop();
 
     }
 
 }
 void traverse(board_t* board) {
-    log("s \n");
+    log("Traversing Maze...\n");
+    //Used to properly set walls without rotating the mouse
     char auxFace;
+
+    //Boolean flags: representing whether the mouse is stuck and whether it is its first step since it last got stuck
     bool stuck = false;
-    bool first = false;
+    bool first = true;
 
     while(!stuck) {
 
+        //Record walls that the mouse runs into
         if(API::wallRight()) {
             auxFace = whichDir('r', board->mouse.direction);
             setWallDir(auxFace, board);
@@ -253,10 +269,10 @@ void traverse(board_t* board) {
 
         if (API::wallFront()){
             setWallDir(board->mouse.direction, board);
-
         }
 
-        switch (bestMove(board, first)) {
+        //Choose the best move based on reducing the flood fill distance value
+        switch (bestMove(board)) {
             case 'f':
                 API::moveForward();
                 break;
@@ -270,18 +286,24 @@ void traverse(board_t* board) {
                 API::moveForward();
                 board->mouse.direction = whichDir('l', board->mouse.direction);
                 break;
-            case 'b':
-                API::turnLeft();
-                API::turnLeft();
-                board->mouse.direction = whichDir('l', board->mouse.direction);
-                board->mouse.direction = whichDir('l', board->mouse.direction);
-                API::moveForward();
-                    break;
-            case 'x':
-                stuck = true;
+            case 'x': //If the mouse finds itself stuck it might be...
+                //In a corner where it needs to turn around
+                if(first) {
+                    API::turnLeft();
+                    API::turnLeft();
+                    board->mouse.direction = whichDir('l', board->mouse.direction);
+                    board->mouse.direction = whichDir('l', board->mouse.direction);
+                    API::moveForward();
+                }
+                //Or genuinely stuck
+                else {
+                    stuck = true;
+                }
+                break;
+            default:
                 break;
         }
-        if(!stuck) {
+        if(!stuck) { //Updates the tiles visually during the time the mouse traverses and is not stuck
             updateCoords(&board->mouse.x, &board->mouse.y, board->mouse.direction);
             API::setColor(board->mouse.x, board->mouse.y, 'G');
         }
@@ -291,7 +313,8 @@ void traverse(board_t* board) {
 
 
 
-char bestMove(board_t* board, bool first) {
+char bestMove(board_t* board) {
+    //Minimum distance from objective is initialized as current distance. Chosen move is initialized as stuck
     int minDist = board->cells[board->mouse.x][board->mouse.y].distance;
     char chosenMove = 'x', tempDir;
     int tempDist;
@@ -327,28 +350,15 @@ char bestMove(board_t* board, bool first) {
             chosenMove = 'r';
         }
     }
-    if(first) {//checks backcell
-        API::turnRight();
-        API::turnRight();
-        tempX = board->mouse.x;
-        tempY = board->mouse.y;
-        tempDir = whichDir('r', board->mouse.direction);
-        tempDir = whichDir('r', tempDir);
-        if(!API::wallFront()) {
-            if(minDist > board->cells[tempX][tempY].distance) {
-                minDist = board->cells[tempX][tempY].distance;
-                chosenMove = 'b';
-            }
-        }
-        API::turnRight();
-        API::turnRight();
-    }
     return chosenMove;
 }
 
 
 void setWallDir(char dir, board_t* board) {
+    //Sets walls both visually and in the board matrix based on absolute directions; hence why it needs to
+    //receive the mouse´s direction
 
+    //if statement ensures that walls are set in both adjacent cells
     switch (dir) {
         case 'n':
             board->cells[board->mouse.x][board->mouse.y].wallNorth = true;
@@ -373,6 +383,8 @@ void setWallDir(char dir, board_t* board) {
             if(board->mouse.x - 1 >= 0) {
                 board->cells[board->mouse.x - 1][board->mouse.y].wallEast = true;
             }
+            break;
+        default:
             break;
     }
     API::setWall(board->mouse.x, board->mouse.y, dir);
