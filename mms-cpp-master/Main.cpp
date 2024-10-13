@@ -5,7 +5,7 @@
 
 #include <stack>
 #include <queue>
-#include <array>
+
 
 #define MAX_SIZE 16
 
@@ -263,7 +263,6 @@ void travesti(board_t* board) {
     int tempY = board->mouse.y;
     int i, counter;
     floodFill(board);
-    std::array<move_t, 4> moves;
     move_t thisMove;
     for( i = 0; i < 4; i++){
         tempX = board->mouse.x;
@@ -289,17 +288,7 @@ char bestMove(board_t* board) {
     int tempDist;
     int tempX, tempY;
     for( i = 0; i < 4; i++){
-        tempX = board->mouse.x;
-        tempY = board->mouse.y;
-        if(!API::wallFront()) {
-            API::turnLeft();
-            board->mouse.direction = whichDir('l', board->mouse.direction);
-            updateCoords(&tempX, &tempY, board->mouse.direction);
 
-            tempDist = board->cells[tempX][tempY].distance;
-            thisMove.direction =board->mouse.direction;
-            moves[counter] = thisMove;
-            counter++;
         }
     }
 
