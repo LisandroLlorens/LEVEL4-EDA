@@ -6,8 +6,9 @@
 #include <stack>
 #include <queue>
 
-
 #define MAX_SIZE 16
+#define GO 'g'
+#define RETURN 'r'
 
 typedef struct cells{
     bool mark;
@@ -35,13 +36,10 @@ typedef struct {
     char direction;
 }move_t;
 
-
-
-
 char whichDir(char lastTurn, char direction);
 void updateCoords(int* x, int* y, char direction);
 board_t initBoard(void);
-void floodFill(board_t* board);
+void floodFill(board_t* board, char mode);
 void travesti(board_t* board);
 
 void log(const std::string& text) {
@@ -56,7 +54,7 @@ int main(int argc, char* argv[]) {
     board_t board = initBoard();
 
 
-    floodFill(&board);
+    floodFill(&board, GO);
 
     char auxFace;
     while (true) {
@@ -93,10 +91,6 @@ int main(int argc, char* argv[]) {
         API::moveForward();
     }
 }
-
-
-
-
 
 
 char whichDir(char lastTurn, char direction) {
@@ -198,24 +192,30 @@ board_t initBoard(void) {
 }
 
 
-void floodFill(board_t* board){
+void floodFill(board_t* board, char mode){
     for(int i = 0; i < MAX_SIZE ; i++) {
         for(int j = 0; j < MAX_SIZE; j++) {
-            board->cells[i][j].mark = 0;//sets everything to 0
+            board->cells[i][j].mark = false;// resets path marks
         }
     }
 
     std::queue<cells_t*> pathQ;
+    switch (mode) {
+        case GO:
+            board->cells[7][7] = {1, 0, 7, 7};
+            pathQ.push(&(board->cells[7][7]));
+            board->cells[8][7] = {1, 0, 8, 7};
+            pathQ.push(&(board->cells[8][7]));
+            board->cells[7][8] = {1, 0, 7, 8};
+            pathQ.push(&(board->cells[7][8]));
+            board->cells[8][8] = {1, 0, 8, 8};
+            pathQ.push(&(board->cells[8][8]));
+            break;
 
-    board->cells[7][7] = {1, 0, 7, 7};
-    pathQ.push(&(board->cells[7][7]));
-    board->cells[8][7] = {1, 0, 8, 7};
-    pathQ.push(&(board->cells[8][7]));
-    board->cells[7][8] = {1, 0, 7, 8};
-    pathQ.push(&(board->cells[7][8]));
-    board->cells[8][8] = {1, 0, 8, 8};
-    pathQ.push(&(board->cells[8][8]));
-
+        case RETURN:
+            board->cells[0][0] = {.mark = 1, .distance = 0, .x = 0, .y = 0};
+            break;
+    }
 
     cells_t* thisCell;
 
@@ -252,8 +252,6 @@ void floodFill(board_t* board){
             API::setText(thisCell->x + 1, thisCell->y, std::to_string(thisCell->distance +1));
         }
 
-
-
     }
 
 }
@@ -263,6 +261,7 @@ void travesti(board_t* board) {
     int tempY = board->mouse.y;
     int i, counter;
     floodFill(board);
+    std::array<move_t, 4> moves;
     move_t thisMove;
     for( i = 0; i < 4; i++){
         tempX = board->mouse.x;
@@ -288,7 +287,17 @@ char bestMove(board_t* board) {
     int tempDist;
     int tempX, tempY;
     for( i = 0; i < 4; i++){
+        tempX = board->mouse.x;
+        tempY = board->mouse.y;
+        if(!API::wallFront()) {
+            API::turnLeft();
+            board->mouse.direction = whichDir('l', board->mouse.direction);
+            updateCoords(&tempX, &tempY, board->mouse.direction);
 
+            tempDist = board->cells[tempX][tempY].distance;
+            thisMove.direction =board->mouse.direction;
+            moves[counter] = thisMove;
+            counter++;
         }
     }
 
