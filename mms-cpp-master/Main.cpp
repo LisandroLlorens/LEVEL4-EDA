@@ -55,12 +55,14 @@ int main(int argc, char* argv[]) {
     int tripsLeft = 5;
     char mode = GO;
 
-    while (tripsLeft) { //Go and return 5 times; halting after the 5th (3rd time going towards center)
-        while(board.cells[board.mouse.x][board.mouse.y].distance) { //While it has not arrived to its current destination
+    while (tripsLeft > 0) { //Go and return 5 times; halting after the 5th (3rd time going towards center)
+        while(board.cells[board.mouse.x][board.mouse.y].distance > 0) { //While it has not arrived to its current destination
             floodFill(&board, mode);
             traverse(&board);
         }
+        log("Done...");
         mode = (mode == GO)? RETURN : GO; //Switches from trying to reach the center (GO), to trying to reach the start (RETURN)
+        floodFill(&board, mode);
         tripsLeft--;
     }
 }
@@ -183,18 +185,36 @@ void floodFill(board_t* board, char mode) {
     //Switches between setting the center or the start as the objective
     switch (mode) {
         case GO:
-            board->cells[7][7] = {1, 0, 7, 7};
+            board->cells[7][7].mark = 1;
+            board->cells[7][7].distance = 0;
+            board->cells[7][7].x = 7;
+            board->cells[7][7].y = 7;
             pathQ.push(&(board->cells[7][7]));
-            board->cells[8][7] = {1, 0, 8, 7};
+
+            board->cells[8][7].mark = 1;
+            board->cells[8][7].distance = 0;
+            board->cells[8][7].x = 8;
+            board->cells[8][7].y = 7;
             pathQ.push(&(board->cells[8][7]));
-            board->cells[7][8] = {1, 0, 7, 8};
+
+            board->cells[7][8].mark = 1;
+            board->cells[7][8].distance = 0;
+            board->cells[7][8].x = 7;
+            board->cells[7][8].y = 8;
             pathQ.push(&(board->cells[7][8]));
-            board->cells[8][8] = {1, 0, 8, 8};
+
+            board->cells[8][8].mark = 1;
+            board->cells[8][8].distance = 0;
+            board->cells[8][8].x = 8;
+            board->cells[8][8].y = 8;
             pathQ.push(&(board->cells[8][8]));
             break;
 
         case RETURN:
-            board->cells[0][0] = {1, 0, 0, 0};
+            board->cells[0][0].mark = 1;
+            board->cells[0][0].distance = 0;
+            board->cells[0][0].x = 0;
+            board->cells[0][0].y = 0;
             pathQ.push(&(board->cells[0][0]));
             break;
 
