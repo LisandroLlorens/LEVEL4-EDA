@@ -60,7 +60,6 @@ int main(int argc, char* argv[]) {
             floodFill(&board, mode);
             traverse(&board);
         }
-        log("Done...");
         mode = (mode == GO)? RETURN : GO; //Switches from trying to reach the center (GO), to trying to reach the start (RETURN)
         floodFill(&board, mode);
         tripsLeft--;
