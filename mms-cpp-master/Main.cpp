@@ -188,6 +188,7 @@ void floodFill(board_t* board, char mode) {
             board->cells[7][7].distance = 0;
             board->cells[7][7].x = 7;
             board->cells[7][7].y = 7;
+            API::setText(7, 7, "0");
             pathQ.push(&(board->cells[7][7]));
 
             board->cells[8][7].mark = 1;
@@ -195,18 +196,21 @@ void floodFill(board_t* board, char mode) {
             board->cells[8][7].x = 8;
             board->cells[8][7].y = 7;
             pathQ.push(&(board->cells[8][7]));
+            API::setText(8, 7, "0");
 
             board->cells[7][8].mark = 1;
             board->cells[7][8].distance = 0;
             board->cells[7][8].x = 7;
             board->cells[7][8].y = 8;
             pathQ.push(&(board->cells[7][8]));
+            API::setText(7, 8, "0");
 
             board->cells[8][8].mark = 1;
             board->cells[8][8].distance = 0;
             board->cells[8][8].x = 8;
             board->cells[8][8].y = 8;
             pathQ.push(&(board->cells[8][8]));
+            API::setText(8, 8, "0");
             break;
 
         case RETURN:
@@ -214,6 +218,7 @@ void floodFill(board_t* board, char mode) {
             board->cells[0][0].distance = 0;
             board->cells[0][0].x = 0;
             board->cells[0][0].y = 0;
+            API::setText(0, 0, "0");
             pathQ.push(&(board->cells[0][0]));
             break;
 
