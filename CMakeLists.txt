@@ -8,4 +8,6 @@ include_directories(mms-cpp-master)
 add_executable(mms_cpp_master
     mms-cpp-master/API.cpp
     mms-cpp-master/API.h
-    mms-cpp-master/Main.cpp)
+    mms-cpp-master/Main.cpp
+        mms-cpp-master/mightyMouseAI.h
+        mms-cpp-master/mightyMouseAI.cpp)
